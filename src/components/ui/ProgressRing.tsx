@@ -4,6 +4,7 @@ interface ProgressRingProps {
   progress: number // 0-1
   size?: number
   strokeWidth?: number
+  color?: string
   className?: string
   children?: React.ReactNode
 }
@@ -12,6 +13,7 @@ export function ProgressRing({
   progress,
   size = 80,
   strokeWidth = 6,
+  color = 'hsl(var(--color-primary))',
   className,
   children,
 }: ProgressRingProps) {
@@ -37,7 +39,7 @@ export function ProgressRing({
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="hsl(var(--color-primary))"
+          stroke={color}
           strokeWidth={strokeWidth}
           strokeLinecap="round"
           strokeDasharray={circumference}
