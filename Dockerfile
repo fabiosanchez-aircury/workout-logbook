@@ -1,17 +1,17 @@
 FROM node:20-alpine AS base
-RUN corepack enable && corepack prepare yarn@stable --activate
 WORKDIR /app
 
 # Install dependencies
 FROM base AS deps
-COPY package.json yarn.lock* .yarnrc.yml* ./
-RUN yarn install --immutable
+COPY package.json yarn.lock* ./
+RUN yarn install --frozen-lockfile
 
 # Development server
-FROM deps AS dev
-COPY . .
+# node_modules live in a named Docker volume — install at startup to keep in sync
+FROM base AS dev
+WORKDIR /app
 EXPOSE 5173
-CMD ["yarn", "dev"]
+CMD ["sh", "-c", "yarn install --frozen-lockfile && yarn dev"]
 
 # Build
 FROM deps AS builder
