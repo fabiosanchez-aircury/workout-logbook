@@ -1,5 +1,7 @@
 # Workout Logbook
 
+> **Vibe coded project.** Designs generated with the [Stitch MCP](https://stitch.withgoogle.com), code written entirely with [Claude Code](https://claude.ai/claude-code).
+
 Web app to track workouts: routines, sets, weights, rest timers and progress over time.
 
 **Stack:** React 18 + TypeScript + Vite · Tailwind CSS · Zustand · TanStack Query · Recharts · Supabase (auth, DB, storage) · Vercel
@@ -8,7 +10,8 @@ Web app to track workouts: routines, sets, weights, rest timers and progress ove
 
 ## Requirements
 
-- **Docker** (and Docker Compose) — that's it. No Node, Yarn or Supabase CLI needed locally.
+- **Docker** (and Docker Compose)
+- **Node.js** ≥ 18 (only needed to generate `.env` on first setup — not for running the app)
 
 ---
 
@@ -21,7 +24,15 @@ git clone https://github.com/fabiosanchez-aircury/workout-logbook.git
 cd workout-logbook
 ```
 
-### 2. Start
+### 2. Generate local config
+
+```bash
+node scripts/gen-local-env.cjs
+```
+
+This creates a `.env` file with JWT keys derived from a local secret. The file is gitignored — it never leaves your machine.
+
+### 3. Start
 
 ```bash
 make dev

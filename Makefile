@@ -1,9 +1,29 @@
-.PHONY: dev down logs build test test-watch lint type-check db-fixtures db-reset help
+.PHONY: dev down logs build test test-watch lint type-check db-fixtures db-reset setup help
+
+# Load .env if present (so ANON_KEY etc. are available as make vars)
+-include .env
+export
+
+# ── Setup ──────────────────────────────────────────────────────────────────────
+# Generates .env with local dev JWT values derived from JWT_SECRET.
+# Only Docker is required. Run once before `make dev`.
+
+setup:
+	@if [ -f .env ]; then \
+		echo ".env already exists — delete it first if you want to regenerate."; \
+	else \
+		node scripts/gen-local-env.cjs; \
+		echo "Created .env — run 'make dev' to start."; \
+	fi
 
 # ── Dev ───────────────────────────────────────────────────────────────────────
 # Everything runs in Docker — only Docker required locally.
 
 dev:
+	@if [ ! -f .env ]; then \
+		echo "No .env found. Running setup first..."; \
+		node scripts/gen-local-env.cjs; \
+	fi
 	docker compose up
 
 down:
@@ -33,11 +53,12 @@ type-check:
 # Fixtures create dev users via GoTrue signup API, then load profile/routine/session data.
 
 db-fixtures:
+	@if [ -z "$(ANON_KEY)" ]; then echo "Error: ANON_KEY not set. Run 'make setup' first."; exit 1; fi
 	@echo "Creating fixture users via GoTrue API (idempotent)..."
 	@for name in alice bob carol dave eve; do \
 		curl -sf -X POST 'http://localhost:8000/auth/v1/signup' \
 			-H 'Content-Type: application/json' \
-			-H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRFA0NiK7kyqd6X3xu8GY3KlOzWDYIWFzDC3MYIlBRc' \
+			-H "apikey: $(ANON_KEY)" \
 			-d "{\"email\":\"$${name}@dev.local\",\"password\":\"dev-password-123\"}" > /dev/null 2>&1 || true; \
 	done
 	@echo "Setting authenticated role for fixture users..."
@@ -64,6 +85,7 @@ help:
 	@echo ""
 	@echo "Workout Logbook — only Docker required"
 	@echo ""
+	@echo "  make setup        Generate .env with local dev keys (run once)"
 	@echo "  make dev          Start all services (db, auth, rest, gateway, app)"
 	@echo "  make down         Stop all services"
 	@echo "  make logs         Follow app container logs"

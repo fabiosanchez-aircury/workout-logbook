@@ -41,5 +41,8 @@ coverage
 supabase/.branches
 supabase/.temp
 
+# Design reference files (not part of the codebase)
+stitch-screens/
+
 # TypeScript
 *.tsbuildinfo
