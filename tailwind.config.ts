@@ -21,7 +21,7 @@ const config: Config = {
         'intensity-high': 'hsl(var(--color-intensity-high) / <alpha-value>)',
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['Lexend', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'Menlo', 'monospace'],
       },
       borderRadius: {

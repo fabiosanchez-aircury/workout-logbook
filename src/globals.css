@@ -4,19 +4,20 @@
 
 @layer base {
   :root {
-    --color-primary: 220 90% 56%;
+    /* Matches Stitch design exactly */
+    --color-primary: 217 91% 60%;        /* #3B82F6 */
     --color-primary-foreground: 0 0% 100%;
-    --color-background: 224 15% 10%;
-    --color-surface: 224 12% 15%;
-    --color-surface-elevated: 224 10% 20%;
-    --color-border: 224 8% 25%;
-    --color-text: 210 20% 95%;
-    --color-text-muted: 210 10% 55%;
-    --color-success: 142 72% 50%;
-    --color-warning: 38 92% 50%;
+    --color-background: 217 41% 10%;     /* #0F1724 */
+    --color-surface: 215 32% 17%;        /* #1E293B */
+    --color-surface-elevated: 215 28% 22%;
+    --color-border: 215 25% 28%;
+    --color-text: 210 20% 96%;
+    --color-text-muted: 215 16% 55%;
+    --color-success: 160 84% 39%;        /* #10B981 */
+    --color-warning: 43 97% 56%;         /* #FBBF24 */
     --color-danger: 0 84% 60%;
-    --color-intensity-low: 142 72% 50%;
-    --color-intensity-mid: 38 92% 50%;
+    --color-intensity-low: 160 84% 39%;
+    --color-intensity-mid: 43 97% 56%;
     --color-intensity-high: 0 84% 60%;
   }
 
