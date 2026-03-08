@@ -1,107 +1,81 @@
-.PHONY: dev build test test-watch lint lint-fix type-check db-push db-types db-fixtures docker-up docker-down docker-logs install clean
+.PHONY: dev down logs build test test-watch lint type-check db-fixtures db-reset help
 
-# ── Local dev (requires yarn + node >= 20) ──────────────────────────────────
+# ── Dev ───────────────────────────────────────────────────────────────────────
+# Everything runs in Docker — only Docker required locally.
+
 dev:
-	yarn dev
-
-build:
-	yarn build
-
-test:
-	yarn test
-
-test-watch:
-	yarn test:watch
-
-test-ui:
-	yarn test:ui
-
-lint:
-	yarn lint
-
-lint-fix:
-	yarn lint:fix
-
-type-check:
-	yarn type-check
-
-install:
-	yarn install
-
-# ── Docker ───────────────────────────────────────────────────────────────────
-docker-up:
-	docker compose up -d
-
-docker-down:
-	docker compose down
-
-docker-logs:
-	docker compose logs -f app
-
-docker-build:
-	docker compose build
-
-docker-prod:
-	docker compose -f docker-compose.prod.yml up -d
-
-# Run dev via Docker (all-in-one)
-docker-dev:
 	docker compose up
 
-# ── Supabase ─────────────────────────────────────────────────────────────────
-db-start:
-	supabase start
+down:
+	docker compose down
 
-db-stop:
-	supabase stop
+logs:
+	docker compose logs -f app
 
-db-push:
-	supabase db push
+build:
+	docker compose run --rm app sh -c "yarn build"
 
-db-reset:
-	supabase db reset
+# ── Tests & linting ───────────────────────────────────────────────────────────
+test:
+	docker compose run --rm app sh -c "yarn install --frozen-lockfile && yarn test"
 
-db-types:
-	supabase gen types typescript --local > src/types/database.types.ts
-	@echo "Types generated at src/types/database.types.ts"
+test-watch:
+	docker compose run --rm -it app sh -c "yarn install --frozen-lockfile && yarn test:watch"
+
+lint:
+	docker compose run --rm app sh -c "yarn install --frozen-lockfile && yarn lint"
+
+type-check:
+	docker compose run --rm app sh -c "yarn install --frozen-lockfile && yarn type-check"
+
+# ── Database ──────────────────────────────────────────────────────────────────
+# Migrations run automatically on `make dev` via the migrate service.
+# Fixtures create dev users via GoTrue signup API, then load profile/routine/session data.
 
 db-fixtures:
+	@echo "Creating fixture users via GoTrue API (idempotent)..."
+	@for name in alice bob carol dave eve; do \
+		curl -sf -X POST 'http://localhost:8000/auth/v1/signup' \
+			-H 'Content-Type: application/json' \
+			-H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRFA0NiK7kyqd6X3xu8GY3KlOzWDYIWFzDC3MYIlBRc' \
+			-d "{\"email\":\"$${name}@dev.local\",\"password\":\"dev-password-123\"}" > /dev/null 2>&1 || true; \
+	done
+	@echo "Setting authenticated role for fixture users..."
+	@docker compose exec db psql -U postgres -d postgres -c \
+		"UPDATE auth.users SET role = 'authenticated' WHERE email LIKE '%@dev.local';" > /dev/null
 	@echo "Loading fixture data..."
-	supabase db execute --file supabase/fixtures/001_users.sql
-	supabase db execute --file supabase/fixtures/002_profiles.sql
-	supabase db execute --file supabase/fixtures/003_routines.sql
-	supabase db execute --file supabase/fixtures/005_sessions.sql
-	supabase db execute --file supabase/fixtures/006_shares.sql
-	@echo "Fixtures loaded."
+	@for f in supabase/fixtures/002_profiles.sql supabase/fixtures/003_routines.sql supabase/fixtures/005_sessions.sql supabase/fixtures/006_shares.sql; do \
+		echo "  $$f"; \
+		docker compose exec db psql -U postgres -d postgres -f /dev/stdin < $$f; \
+	done
+	@echo "Done. Users: alice/bob/carol/dave/eve — password: dev-password-123"
 
-db-status:
-	supabase status
+db-reset:
+	docker compose down -v
+	docker compose up -d
+	@echo "Database reset. Run 'make db-fixtures' to load dev data."
 
-# ── Utilities ────────────────────────────────────────────────────────────────
-clean:
-	rm -rf dist node_modules .yarn/cache
+# ── Production ────────────────────────────────────────────────────────────────
+prod:
+	docker compose -f docker-compose.prod.yml up -d
 
+# ── Help ──────────────────────────────────────────────────────────────────────
 help:
 	@echo ""
-	@echo "Workout Logbook — Makefile commands"
+	@echo "Workout Logbook — only Docker required"
 	@echo ""
-	@echo "  make dev            Start Vite dev server"
-	@echo "  make build          Production build"
-	@echo "  make test           Run all tests"
-	@echo "  make test-watch     Run tests in watch mode"
-	@echo "  make lint           Run ESLint + TypeScript check"
-	@echo "  make type-check     Run tsc --noEmit"
-	@echo "  make install        Install dependencies with yarn"
+	@echo "  make dev          Start all services (db, auth, rest, gateway, app)"
+	@echo "  make down         Stop all services"
+	@echo "  make logs         Follow app container logs"
+	@echo "  make build        Build for production"
 	@echo ""
-	@echo "  make docker-up      Start Docker containers (detached)"
-	@echo "  make docker-down    Stop Docker containers"
-	@echo "  make docker-dev     Start Docker + follow logs"
-	@echo "  make docker-logs    Follow app container logs"
+	@echo "  make test         Run all tests"
+	@echo "  make test-watch   Run tests in watch mode"
+	@echo "  make lint         Run ESLint + TypeScript check"
+	@echo "  make type-check   Run tsc --noEmit"
 	@echo ""
-	@echo "  make db-start       Start Supabase local stack"
-	@echo "  make db-push        Push migrations to Supabase"
-	@echo "  make db-reset       Reset local DB and re-apply migrations"
-	@echo "  make db-types       Generate TypeScript types from schema"
-	@echo "  make db-fixtures    Load dev fixture data"
-	@echo "  make db-status      Show Supabase local stack status"
+	@echo "  make db-fixtures  Create fixture users + load dev data"
+	@echo "  make db-reset     Wipe DB volumes and restart fresh"
+	@echo ""
+	@echo "  make prod         Start in production mode"
 	@echo ""

@@ -2,111 +2,87 @@
 
 Web app to track workouts: routines, sets, weights, rest timers and progress over time.
 
-**Stack:** React 18 + TypeScript + Vite · Supabase (auth, DB, storage) · Tailwind CSS · Zustand · Vercel
+**Stack:** React 18 + TypeScript + Vite · Tailwind CSS · Zustand · TanStack Query · Recharts · Supabase (auth, DB, storage) · Vercel
 
 ---
 
 ## Requirements
 
-- Node >= 20
-- Yarn (`npm i -g yarn`)
-- [Supabase CLI](https://supabase.com/docs/guides/cli) (`npm i -g supabase`)
-- Docker (to run Supabase locally)
+- **Docker** (and Docker Compose) — that's it. No Node, Yarn or Supabase CLI needed locally.
 
 ---
 
 ## Local setup
 
-### 1. Clone and install
+### 1. Clone
 
 ```bash
 git clone https://github.com/fabiosanchez-aircury/workout-logbook.git
 cd workout-logbook
-make install
 ```
 
-### 2. Start Supabase locally
-
-```bash
-make db-start
-```
-
-This spins up PostgreSQL, Auth and Storage via Docker. Once ready, it prints the local URLs and keys:
-
-```
-API URL: http://localhost:54321
-anon key: eyJ...
-service_role key: eyJ...
-```
-
-### 3. Environment variables
-
-```bash
-cp .env.example .env.local
-```
-
-Fill in `.env.local` with the values from `make db-start` (or `supabase status`):
-
-```env
-VITE_SUPABASE_URL=http://localhost:54321
-VITE_SUPABASE_ANON_KEY=<anon key>
-VITE_SUPABASE_SERVICE_KEY=<service_role key>   # dev login only
-```
-
-### 4. Run migrations
-
-```bash
-make db-push
-```
-
-### 5. Load fixtures (dev data)
-
-```bash
-make db-fixtures
-```
-
-Loads 5 users with different scenarios so you can explore the app without signing up.
-
-### 6. Start the app
+### 2. Start
 
 ```bash
 make dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173).
+This starts the full stack in Docker:
 
-In development, a **Dev Login** panel appears on the login screen to sign in instantly as any fixture user:
-
-| User | Scenario |
+| Service | URL |
 |---|---|
-| alice | New account, no data |
-| bob | Active routine, 3 months of history |
-| carol | Public shared profile |
-| dave | Profile shared in edit mode (coach) |
-| eve | Lots of data, useful for testing charts |
+| App (Vite) | http://localhost:5173 |
+| API gateway | http://localhost:8000 |
+| Database | localhost:5432 |
+
+First boot takes a minute — it installs dependencies and runs migrations automatically.
+
+### 3. Load dev data (optional)
+
+```bash
+make db-fixtures
+```
+
+Creates 5 fixture users with different scenarios:
+
+| User | Password | Scenario |
+|---|---|---|
+| alice@dev.local | dev-password-123 | New account, no data |
+| bob@dev.local | dev-password-123 | Active routine, 3 months of history |
+| carol@dev.local | dev-password-123 | Public shared profile |
+| dave@dev.local | dev-password-123 | Profile shared in edit mode (coach) |
+| eve@dev.local | dev-password-123 | Lots of data, useful for testing charts |
+
+In development, a **Dev Login** panel appears on the login screen to sign in instantly as any of these users.
+
+### 4. Environment variables
+
+The defaults in `docker-compose.yml` work out of the box for local dev (standard Supabase demo keys). If you need to override anything:
+
+```bash
+cp .env.example .env
+# edit .env as needed
+```
 
 ---
 
 ## Commands
 
 ```bash
-make dev            # Start Vite dev server
+make dev            # Start all services (db, auth, rest, gateway, app)
+make down           # Stop all services
+make logs           # Follow app container logs
 make build          # Production build
-make test           # Run all tests
+
+make test           # Run all tests (Vitest)
 make test-watch     # Run tests in watch mode
 make lint           # ESLint + TypeScript check
+make type-check     # tsc --noEmit only
 
-make db-start       # Start local Supabase stack (Docker)
-make db-stop        # Stop local Supabase stack
-make db-push        # Apply migrations
-make db-reset       # Reset DB and re-apply migrations
-make db-fixtures    # Load dev fixture data
-make db-types       # Regenerate TypeScript types from schema
+make db-fixtures    # Create fixture users + load dev data
+make db-reset       # Wipe DB volumes and restart fresh
 
-make docker-up      # Start app in Docker (detached)
-make docker-down    # Stop containers
-make docker-dev     # Start app in Docker with logs
-make docker-prod    # Start in production mode
+make prod           # Start in production mode
 ```
 
 ---
@@ -128,22 +104,38 @@ src/
 ├── pages/          # One component per route
 ├── services/       # Supabase data access logic
 ├── stores/         # Zustand: authStore, activeSessionStore, timerStore
-└── types/          # database.types.ts (generated) + models.ts
+└── types/          # database.types.ts + models.ts
 supabase/
+├── init/           # DB init scripts (roles, auth schema) — run on first boot
 ├── migrations/     # Schema, RLS, seed exercises, storage
-└── fixtures/       # Dev seed data
+├── fixtures/       # Dev seed data
+└── gateway.conf    # nginx reverse proxy config
 ```
+
+---
+
+## How it works locally
+
+The Docker Compose stack replaces the Supabase CLI:
+
+| Container | Image | Purpose |
+|---|---|---|
+| `db` | postgres:16-alpine | Database with custom role init |
+| `auth` | supabase/gotrue | Authentication (email/password, OAuth) |
+| `rest` | postgrest/postgrest | Auto-generated REST API |
+| `gateway` | nginx:alpine | Reverse proxy on port 8000 |
+| `migrate` | postgres:16-alpine | Runs SQL migrations on startup |
+| `app` | node:20-alpine | Vite dev server |
 
 ---
 
 ## Deploy
 
-The app is designed to run on **Vercel** + **Supabase cloud** (both free tier).
+The app targets **Vercel** (frontend) + **Supabase cloud** (backend), both free tier.
 
 1. Create a project at [supabase.com](https://supabase.com)
-2. Run `make db-push` pointing to the remote project
-3. Enable Google OAuth in Supabase Dashboard → Authentication → Providers
-4. Connect the repo to [vercel.com](https://vercel.com) and add the environment variables:
+2. Run the migrations from `supabase/migrations/` in the Supabase SQL editor
+3. Connect the repo to [vercel.com](https://vercel.com) and set:
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
 
