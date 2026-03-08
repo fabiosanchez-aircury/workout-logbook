@@ -1,0 +1,75 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-primary: 220 90% 56%;
+    --color-primary-foreground: 0 0% 100%;
+    --color-background: 224 15% 10%;
+    --color-surface: 224 12% 15%;
+    --color-surface-elevated: 224 10% 20%;
+    --color-border: 224 8% 25%;
+    --color-text: 210 20% 95%;
+    --color-text-muted: 210 10% 55%;
+    --color-success: 142 72% 50%;
+    --color-warning: 38 92% 50%;
+    --color-danger: 0 84% 60%;
+    --color-intensity-low: 142 72% 50%;
+    --color-intensity-mid: 38 92% 50%;
+    --color-intensity-high: 0 84% 60%;
+  }
+
+  * {
+    box-sizing: border-box;
+    border-color: hsl(var(--color-border));
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-text font-sans antialiased;
+    min-height: 100dvh;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--color-text-muted));
+  }
+}
+
+@layer components {
+  /* Safe area padding for mobile */
+  .pb-safe {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+  .pt-safe {
+    padding-top: max(0px, env(safe-area-inset-top));
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
